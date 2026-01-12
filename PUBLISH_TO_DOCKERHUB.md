@@ -71,9 +71,9 @@ docker tag telegram_miniapp:latest YOUR_USERNAME/telegram_miniapp:v1.0.0
 docker push YOUR_USERNAME/telegram_miniapp:v1.0.0
 ```
 
-## Использование образа из Docker Hub в Docker Swarm
+## Использование образа из Docker Hub
 
-После публикации обновите `docker-compose.swarm.yml`:
+После публикации обновите `docker-compose.yml`:
 
 ```yaml
 web:
@@ -81,9 +81,9 @@ web:
   # ... остальная конфигурация
 ```
 
-Затем разверните:
+Затем запустите приложение:
 
 ```powershell
-docker stack deploy -c docker-compose.swarm.yml telegram-miniapp
+docker-compose up -d
 ```
 

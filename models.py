@@ -2,6 +2,8 @@ from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import db
+import secrets
+import string
 
 
 class City(db.Model):
@@ -107,5 +109,33 @@ class FormSubmission(db.Model):
             'telegram_user_id': self.telegram_user_id,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    tg_id = Column(Integer, nullable=False, unique=True)  # Telegram user ID
+    secret_key = Column(String(64), nullable=False, unique=True)  # Secret key for external system
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'tg_id': self.tg_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+
+    @staticmethod
+    def generate_secret_key():
+        """Generate a random secret key for the user"""
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(32))
 
 

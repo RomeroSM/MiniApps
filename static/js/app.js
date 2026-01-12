@@ -12,8 +12,42 @@ let objects = [];
 let violationCategories = [];
 let violations = [];
 
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
+// Проверка авторизации при загрузке страницы
+document.addEventListener('DOMContentLoaded', async function() {
+    // Проверяем, авторизован ли пользователь
+    if (tg.initData) {
+        try {
+            const response = await fetch(`${API_BASE}/users/check-access`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Telegram-Init-Data': tg.initData
+                },
+                body: JSON.stringify({})
+            });
+
+            const result = await response.json();
+
+            if (!result.success || !result.authorized) {
+                // Пользователь не авторизован, показываем сообщение об ошибке
+                showMessage('Доступ запрещен: Пользователь не зарегистрирован в системе', 'error');
+                // Блокируем всю форму
+                document.querySelectorAll('select, textarea, input, button').forEach(element => {
+                    element.disabled = true;
+                });
+                // Также закрываем приложение через Telegram WebApp
+                setTimeout(() => {
+                    if (tg.close) {
+                        tg.close();
+                    }
+                }, 3000); // Закрытие через 3 секунды после отображения ошибки
+                return;
+            }
+        } catch (error) {
+            console.error('Error checking user access:', error);
+        }
+    }
+
     loadCities();
     loadViolationCategories();
     setupFormHandlers();

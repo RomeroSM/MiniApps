@@ -7,22 +7,13 @@ load_dotenv()
 
 def read_secret(secret_name, default=None):
     """
-    Читает secret из файла Docker Secrets или переменной окружения.
-    Поддерживает оба варианта: Docker Secrets и обычные переменные окружения.
+    Читает secret из переменной окружения.
     """
-    # Сначала пробуем прочитать из Docker Secret файла
-    secret_file = Path(f'/run/secrets/{secret_name}')
-    if secret_file.exists():
-        try:
-            return secret_file.read_text().strip()
-        except Exception:
-            pass
-    
-    # Если файла нет, читаем из переменной окружения
+    # Читаем из переменной окружения
     env_var = os.getenv(secret_name.upper())
     if env_var:
         return env_var
-    
+
     # Пробуем вариант с _FILE суффиксом (Docker Compose style)
     file_path_env = os.getenv(f'{secret_name.upper()}_FILE')
     if file_path_env:
@@ -30,7 +21,7 @@ def read_secret(secret_name, default=None):
             return Path(file_path_env).read_text().strip()
         except Exception:
             pass
-    
+
     return default
 
 

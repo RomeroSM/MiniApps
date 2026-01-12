@@ -27,7 +27,7 @@ def init_db(app: Flask):
                 time.sleep(2)
         
         # Добавление тестовых данных, если таблицы пустые
-        from models import City, Object, ViolationCategory, Violation
+        from models import City, Object, ViolationCategory, Violation, User
         
         if City.query.count() == 0:
             # Добавляем тестовые города
@@ -84,6 +84,19 @@ def init_db(app: Flask):
             for viol_data in violations_data:
                 violation = Violation(**viol_data)
                 db.session.add(violation)
-            
+
+            db.session.commit()
+
+        if User.query.count() == 0:
+            # Добавляем тестовых пользователей
+            users_data = [
+                {'first_name': 'Иван', 'last_name': 'Иванов', 'tg_id': 123456789, 'secret_key': User.generate_secret_key()},
+                {'first_name': 'Мария', 'last_name': 'Петрова', 'tg_id': 987654321, 'secret_key': User.generate_secret_key()},
+                {'first_name': 'Алексей', 'last_name': 'Сидоров', 'tg_id': 555123456, 'secret_key': User.generate_secret_key()}
+            ]
+            for user_data in users_data:
+                user = User(**user_data)
+                db.session.add(user)
+
             db.session.commit()
 

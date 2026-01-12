@@ -92,9 +92,9 @@ docker login harbor.example.com
 docker push harbor.example.com/your-project/telegram_miniapp:latest
 ```
 
-## Использование образа из реестра в Docker Swarm
+## Использование образа из реестра
 
-После публикации образа в реестр, обновите `docker-compose.swarm.yml`:
+После публикации образа в реестр, обновите `docker-compose.yml`:
 
 ```yaml
 web:
@@ -102,9 +102,9 @@ web:
   # ... остальная конфигурация
 ```
 
-Затем разверните stack:
+Затем запустите приложение:
 ```bash
-docker stack deploy -c docker-compose.swarm.yml telegram-miniapp
+docker-compose up -d
 ```
 
 ## Проверка публикации
@@ -149,5 +149,5 @@ IMAGE_TAG=latest
 
 3. **Автоматизация через CI/CD**: Добавьте эти команды в ваш CI/CD pipeline
 
-4. **Безопасность**: Не храните учетные данные в скриптах. Используйте Docker secrets или переменные окружения
+4. **Безопасность**: Не храните учетные данные в скриптах. Используйте переменные окружения или файлы .env
 

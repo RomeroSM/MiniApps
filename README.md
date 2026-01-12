@@ -58,13 +58,9 @@ python app.py
 
 Приложение будет доступно по адресу: `http://localhost:5000`
 
-## Развертывание в Docker Swarm (production)
+## Публикация образа в приватный реестр
 
-Для production окружения рекомендуется использовать Docker Swarm. Подробная инструкция в файле [DOCKER_SWARM.md](DOCKER_SWARM.md).
-
-### Публикация образа в приватный реестр
-
-Перед развертыванием в Swarm рекомендуется опубликовать образ в приватный Docker Registry. Подробная инструкция в файле [BUILD_AND_PUSH.md](BUILD_AND_PUSH.md).
+Для production окружения рекомендуется опубликовать образ в приватный Docker Registry. Подробная инструкция в файле [BUILD_AND_PUSH.md](BUILD_AND_PUSH.md).
 
 **Быстрая команда:**
 ```bash
@@ -83,29 +79,7 @@ docker login your-registry.com
 docker push your-registry.com/telegram_miniapp:latest
 ```
 
-### Быстрый старт:
-
-```bash
-# 1. Инициализация Swarm
-docker swarm init
-
-# 2. Сборка и публикация образа (см. выше)
-# или локальная сборка:
-docker build -t telegram_miniapp:latest .
-
-# 3. Развертывание (с переменными окружения)
-docker stack deploy -c docker-compose.swarm.yml telegram-miniapp
-
-# Или с Docker Secrets (рекомендуется)
-# Сначала создайте secrets, затем:
-docker stack deploy -c docker-stack.yml telegram-miniapp
-```
-
-Или используйте скрипты:
-- `./deploy-swarm.sh` - развертывание с переменными окружения
-- `./deploy-swarm-secrets.sh` - развертывание с Docker Secrets
-
-## Установка через Docker Compose (development)
+## Установка через Docker Compose (development и production)
 
 ### 1. Настройка переменных окружения
 

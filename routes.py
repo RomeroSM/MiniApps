@@ -2,7 +2,7 @@ import os
 from flask import Blueprint, request, jsonify, send_from_directory
 from werkzeug.utils import secure_filename
 from database import db
-from models import City, Object, ViolationCategory, Violation, FormSubmission
+from models import City, Object, ViolationCategory, Violation, FormSubmission, User
 from config import Config
 from telegram_validation import validate_telegram_webapp_data
 
@@ -13,6 +13,15 @@ def allowed_file(filename):
     """Проверка разрешенного расширения файла"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
+
+
+def is_authorized_telegram_user(telegram_user_id):
+    """Проверяет, есть ли пользователь с данным tg_id в базе данных"""
+    if not telegram_user_id:
+        return False
+
+    user = User.query.filter_by(tg_id=telegram_user_id).first()
+    return user is not None
 
 
 @api.route('/cities', methods=['GET'])
@@ -105,80 +114,7 @@ def submit_form():
                     'success': False,
                     'error': 'Invalid Telegram WebApp data'
                 }), 401
-        
-        # Получение данных формы
-        data = request.form
-        
-        # Валидация обязательных полей
-        required_fields = ['city_id', 'object_id', 'violation_category_id', 'violation_id']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({
-                    'success': False,
-                    'error': f'Field {field} is required'
-                }), 400
-        
-        city_id = int(data.get('city_id'))
-        object_id = int(data.get('object_id'))
-        violation_category_id = int(data.get('violation_category_id'))
-        violation_id = int(data.get('violation_id'))
-        comment = data.get('comment', '').strip()
-        
-        # Проверка существования связанных записей
-        if not City.query.get(city_id):
-            return jsonify({
-                'success': False,
-                'error': 'Invalid city_id'
-            }), 400
-        
-        if not Object.query.filter_by(id=object_id, city_id=city_id).first():
-            return jsonify({
-                'success': False,
-                'error': 'Invalid object_id for selected city'
-            }), 400
-        
-        if not ViolationCategory.query.get(violation_category_id):
-            return jsonify({
-                'success': False,
-                'error': 'Invalid violation_category_id'
-            }), 400
-        
-        if not Violation.query.filter_by(id=violation_id, category_id=violation_category_id).first():
-            return jsonify({
-                'success': False,
-                'error': 'Invalid violation_id for selected category'
-            }), 400
-        
-        # Обработка загрузки файла
-        file_path = None
-        if 'file' in request.files:
-            file = request.files['file']
-            if file and file.filename and allowed_file(file.filename):
-                # Проверка размера файла
-                file.seek(0, os.SEEK_END)
-                file_size = file.tell()
-                file.seek(0)
-                
-                if file_size > Config.MAX_FILE_SIZE:
-                    return jsonify({
-                        'success': False,
-                        'error': f'File size exceeds maximum allowed size of {Config.MAX_FILE_SIZE / 1024 / 1024} MB'
-                    }), 400
-                
-                # Сохранение файла
-                filename = secure_filename(file.filename)
-                # Добавляем timestamp для уникальности
-                import time
-                timestamp = int(time.time())
-                filename = f"{timestamp}_{filename}"
-                
-                # Создаем папку uploads если её нет
-                os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-                
-                file_path = os.path.join(Config.UPLOAD_FOLDER, filename)
-                file.save(file_path)
-                file_path = filename  # Сохраняем только имя файла в БД
-        
+
         # Получение user_id из Telegram данных (если есть)
         telegram_user_id = None
         if init_data:
@@ -191,7 +127,87 @@ def submit_form():
                     telegram_user_id = user_data.get('id')
             except:
                 pass
-        
+
+        # Проверка авторизации пользователя
+        if telegram_user_id and not is_authorized_telegram_user(telegram_user_id):
+            return jsonify({
+                'success': False,
+                'error': 'Unauthorized: User is not registered in the system'
+            }), 403
+
+        # Получение данных формы
+        data = request.form
+
+        # Валидация обязательных полей
+        required_fields = ['city_id', 'object_id', 'violation_category_id', 'violation_id']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'success': False,
+                    'error': f'Field {field} is required'
+                }), 400
+
+        city_id = int(data.get('city_id'))
+        object_id = int(data.get('object_id'))
+        violation_category_id = int(data.get('violation_category_id'))
+        violation_id = int(data.get('violation_id'))
+        comment = data.get('comment', '').strip()
+
+        # Проверка существования связанных записей
+        if not City.query.get(city_id):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid city_id'
+            }), 400
+
+        if not Object.query.filter_by(id=object_id, city_id=city_id).first():
+            return jsonify({
+                'success': False,
+                'error': 'Invalid object_id for selected city'
+            }), 400
+
+        if not ViolationCategory.query.get(violation_category_id):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid violation_category_id'
+            }), 400
+
+        if not Violation.query.filter_by(id=violation_id, category_id=violation_category_id).first():
+            return jsonify({
+                'success': False,
+                'error': 'Invalid violation_id for selected category'
+            }), 400
+
+        # Обработка загрузки файла
+        file_path = None
+        if 'file' in request.files:
+            file = request.files['file']
+            if file and file.filename and allowed_file(file.filename):
+                # Проверка размера файла
+                file.seek(0, os.SEEK_END)
+                file_size = file.tell()
+                file.seek(0)
+
+                if file_size > Config.MAX_FILE_SIZE:
+                    return jsonify({
+                        'success': False,
+                        'error': f'File size exceeds maximum allowed size of {Config.MAX_FILE_SIZE / 1024 / 1024} MB'
+                    }), 400
+
+                # Сохранение файла
+                filename = secure_filename(file.filename)
+                # Добавляем timestamp для уникальности
+                import time
+                timestamp = int(time.time())
+                filename = f"{timestamp}_{filename}"
+
+                # Создаем папку uploads если её нет
+                os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
+
+                file_path = os.path.join(Config.UPLOAD_FOLDER, filename)
+                file.save(file_path)
+                file_path = filename  # Сохраняем только имя файла в БД
+
         # Создание записи
         submission = FormSubmission(
             city_id=city_id,
@@ -202,16 +218,16 @@ def submit_form():
             file_path=file_path,
             telegram_user_id=telegram_user_id
         )
-        
+
         db.session.add(submission)
         db.session.commit()
-        
+
         return jsonify({
             'success': True,
             'message': 'Form submitted successfully',
             'data': submission.to_dict()
         }), 201
-        
+
     except ValueError as e:
         return jsonify({
             'success': False,
@@ -219,6 +235,148 @@ def submit_form():
         }), 400
     except Exception as e:
         db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api.route('/users', methods=['GET'])
+def get_users():
+    """Получить список всех пользователей (без секретных ключей)"""
+    try:
+        users = User.query.all()
+        return jsonify({
+            'success': True,
+            'data': [{
+                'id': user.id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'tg_id': user.tg_id,
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            } for user in users]
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api.route('/users', methods=['POST'])
+def create_user():
+    """Создать нового пользователя"""
+    try:
+        data = request.get_json() or request.form
+
+        required_fields = ['first_name', 'last_name', 'tg_id']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({
+                    'success': False,
+                    'error': f'Field {field} is required'
+                }), 400
+
+        # Проверка, что пользователь с таким tg_id еще не существует
+        existing_user = User.query.filter_by(tg_id=data.get('tg_id')).first()
+        if existing_user:
+            return jsonify({
+                'success': False,
+                'error': 'User with this tg_id already exists'
+            }), 400
+
+        # Создание нового пользователя с генерацией секретного ключа
+        user = User(
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            tg_id=int(data.get('tg_id')),
+            secret_key=User.generate_secret_key()
+        )
+
+        db.session.add(user)
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'User created successfully',
+            'data': {
+                'id': user.id,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'tg_id': user.tg_id,
+                'created_at': user.created_at.isoformat(),
+                'secret_key': user.secret_key  # Возвращаем сгенерированный ключ
+            }
+        }), 201
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid data format: {str(e)}'
+        }), 400
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@api.route('/users/check-access', methods=['POST'])
+def check_user_access():
+    """Проверить доступ пользователя по tg_id или из Telegram initData"""
+    try:
+        data = request.get_json() or request.form
+
+        # Попробовать получить tg_id из тела запроса
+        tg_id = data.get('tg_id')
+
+        # Если tg_id не передан в теле, попробовать извлечь из Telegram initData
+        if not tg_id:
+            init_data = request.headers.get('X-Telegram-Init-Data')
+            if init_data and Config.TELEGRAM_BOT_TOKEN:
+                if not validate_telegram_webapp_data(init_data, Config.TELEGRAM_BOT_TOKEN):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid Telegram WebApp data'
+                    }), 401
+
+                try:
+                    from urllib.parse import parse_qs, unquote
+                    parsed_data = parse_qs(unquote(init_data))
+                    if 'user' in parsed_data:
+                        import json
+                        user_data = json.loads(parsed_data['user'][0])
+                        tg_id = user_data.get('id')
+                except:
+                    pass
+
+        if not tg_id:
+            return jsonify({
+                'success': False,
+                'error': 'tg_id is required'
+            }), 400
+
+        user = User.query.filter_by(tg_id=int(tg_id)).first()
+        if user:
+            return jsonify({
+                'success': True,
+                'authorized': True,
+                'user': user.to_dict()
+            }), 200
+        else:
+            return jsonify({
+                'success': True,
+                'authorized': False,
+                'message': 'User not found in the system'
+            }), 200
+
+    except ValueError as e:
+        return jsonify({
+            'success': False,
+            'error': f'Invalid data format: {str(e)}'
+        }), 400
+    except Exception as e:
         return jsonify({
             'success': False,
             'error': str(e)

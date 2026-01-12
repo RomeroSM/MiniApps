@@ -8,9 +8,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    {% if error %}
+    <div class="container">
+        <div class="error-container">
+            <h2>Доступ запрещен</h2>
+            <p>{{ error }}</p>
+            <button onclick="window.close()" class="close-btn">Закрыть</button>
+        </div>
+    </div>
+    {% else %}
     <div class="container">
         <h1>Форма ввода данных</h1>
-        
+
         <form id="dataForm" enctype="multipart/form-data">
             <!-- Город -->
             <div class="form-group">
@@ -20,7 +29,7 @@
                 </select>
                 <span class="error-message" id="city-error"></span>
             </div>
-            
+
             <!-- Объект -->
             <div class="form-group">
                 <label for="object">Объект <span class="required">*</span></label>
@@ -29,7 +38,7 @@
                 </select>
                 <span class="error-message" id="object-error"></span>
             </div>
-            
+
             <!-- Категория нарушения -->
             <div class="form-group">
                 <label for="violationCategory">Категория нарушения <span class="required">*</span></label>
@@ -38,7 +47,7 @@
                 </select>
                 <span class="error-message" id="violationCategory-error"></span>
             </div>
-            
+
             <!-- Нарушение -->
             <div class="form-group">
                 <label for="violation">Нарушение <span class="required">*</span></label>
@@ -47,13 +56,13 @@
                 </select>
                 <span class="error-message" id="violation-error"></span>
             </div>
-            
+
             <!-- Комментарий -->
             <div class="form-group">
                 <label for="comment">Комментарий</label>
                 <textarea id="comment" name="comment" rows="4" placeholder="Введите комментарий (необязательно)"></textarea>
             </div>
-            
+
             <!-- Файл -->
             <div class="form-group">
                 <label for="file">Прикрепить файл</label>
@@ -61,18 +70,19 @@
                 <small class="file-info">Максимальный размер: 10 МБ</small>
                 <span class="error-message" id="file-error"></span>
             </div>
-            
+
             <!-- Кнопка отправки -->
             <button type="submit" id="submitBtn" class="submit-btn">
                 <span id="submitText">Отправить</span>
                 <span id="submitLoader" class="loader" style="display: none;"></span>
             </button>
         </form>
-        
+
         <!-- Сообщение об успехе/ошибке -->
         <div id="message" class="message" style="display: none;"></div>
     </div>
-    
+    {% endif %}
+
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

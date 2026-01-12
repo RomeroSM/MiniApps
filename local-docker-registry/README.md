@@ -85,7 +85,7 @@ services:
     # ... остальная конфигурация
 ```
 
-### Пример 3: Использование в Docker Swarm
+### Пример 3: Использование в Docker Compose
 
 ```yaml
 services:
@@ -93,8 +93,6 @@ services:
     image: localhost:5000/telegram-miniapp:latest
     # ... остальная конфигурация
 ```
-
-**Важно**: Для Docker Swarm на всех узлах должен быть настроен `insecure-registries` в Docker Engine.
 
 ## Управление данными
 
@@ -166,9 +164,9 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### Образы не видны на других узлах Swarm
+### Образы не видны на других машинах
 
-Убедитесь, что на всех узлах Swarm настроен `insecure-registries` в `/etc/docker/daemon.json` (Linux) или в Docker Desktop (Windows).
+Убедитесь, что на всех машинах настроен `insecure-registries` в `/etc/docker/daemon.json` (Linux) или в Docker Desktop (Windows).
 
 
 
