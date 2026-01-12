@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  registry:
+    image: registry:2
+    container_name: local-docker-registry
+    ports:
+      - "5000:5000"
+    environment:
+      - REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry
+      - REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt
+      - REGISTRY_HTTP_TLS_KEY=/certs/domain.key
+    volumes:
+      - registry-data:/var/lib/registry
+      # Раскомментируйте для использования TLS сертификатов
+      # - ./certs:/certs
+    restart: unless-stopped
+    networks:
+      - registry-network
+
+volumes:
+  registry-data:
+    driver: local
+
+networks:
+  registry-network:
+    driver: bridge
+

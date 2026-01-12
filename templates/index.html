@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Форма ввода данных</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Форма ввода данных</h1>
+        
+        <form id="dataForm" enctype="multipart/form-data">
+            <!-- Город -->
+            <div class="form-group">
+                <label for="city">Город <span class="required">*</span></label>
+                <select id="city" name="city_id" required>
+                    <option value="">Выберите город</option>
+                </select>
+                <span class="error-message" id="city-error"></span>
+            </div>
+            
+            <!-- Объект -->
+            <div class="form-group">
+                <label for="object">Объект <span class="required">*</span></label>
+                <select id="object" name="object_id" required disabled>
+                    <option value="">Сначала выберите город</option>
+                </select>
+                <span class="error-message" id="object-error"></span>
+            </div>
+            
+            <!-- Категория нарушения -->
+            <div class="form-group">
+                <label for="violationCategory">Категория нарушения <span class="required">*</span></label>
+                <select id="violationCategory" name="violation_category_id" required>
+                    <option value="">Выберите категорию</option>
+                </select>
+                <span class="error-message" id="violationCategory-error"></span>
+            </div>
+            
+            <!-- Нарушение -->
+            <div class="form-group">
+                <label for="violation">Нарушение <span class="required">*</span></label>
+                <select id="violation" name="violation_id" required disabled>
+                    <option value="">Сначала выберите категорию</option>
+                </select>
+                <span class="error-message" id="violation-error"></span>
+            </div>
+            
+            <!-- Комментарий -->
+            <div class="form-group">
+                <label for="comment">Комментарий</label>
+                <textarea id="comment" name="comment" rows="4" placeholder="Введите комментарий (необязательно)"></textarea>
+            </div>
+            
+            <!-- Файл -->
+            <div class="form-group">
+                <label for="file">Прикрепить файл</label>
+                <input type="file" id="file" name="file" accept=".png,.jpg,.jpeg,.gif,.pdf,.doc,.docx,.txt">
+                <small class="file-info">Максимальный размер: 10 МБ</small>
+                <span class="error-message" id="file-error"></span>
+            </div>
+            
+            <!-- Кнопка отправки -->
+            <button type="submit" id="submitBtn" class="submit-btn">
+                <span id="submitText">Отправить</span>
+                <span id="submitLoader" class="loader" style="display: none;"></span>
+            </button>
+        </form>
+        
+        <!-- Сообщение об успехе/ошибке -->
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
+

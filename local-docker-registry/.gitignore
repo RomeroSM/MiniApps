@@ -1,0 +1,15 @@
+# Данные registry
+registry-data/
+
+# Сертификаты (если используются)
+certs/
+*.crt
+*.key
+*.pem
+
+# Логи
+*.log
+
+
+
+
