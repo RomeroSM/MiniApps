@@ -36,6 +36,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-telegram_miniapp}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-5651063018:AAFymStZngfytb6x6xqiFjzzopbO52Azm5w}
+      API_TOKEN: ${API_TOKEN:-}
       APPLICATION_ROOT: /form
     volumes:
       - ./uploads:/app/uploads

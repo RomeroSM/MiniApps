@@ -4,7 +4,7 @@ from config import Config
 from database import db, init_db
 from models import User
 from telegram_validation import validate_telegram_webapp_data
-from routes import api
+from routes import api, is_authorized_telegram_user
 import os
 
 app = Flask(__name__)
@@ -52,15 +52,6 @@ else:
     app.wsgi_app = ReverseProxied(app.wsgi_app)
 
 
-def is_authorized_telegram_user(telegram_user_id):
-    """Проверяет, есть ли пользователь с данным tg_id в базе данных"""
-    if not telegram_user_id:
-        return False
-
-    user = User.query.filter_by(tg_id=telegram_user_id).first()
-    return user is not None
-
-
 @app.route('/')
 def index():
     """Главная страница с формой"""
@@ -74,18 +65,28 @@ def index():
 
         # Извлекаем user_id из данных
         try:
+            import logging
+            logger = logging.getLogger(__name__)
             from urllib.parse import parse_qs, unquote
             parsed_data = parse_qs(unquote(init_data))
+            logger.info(f"index: parsed_data keys: {parsed_data.keys()}")
             if 'user' in parsed_data:
                 import json
                 user_data = json.loads(parsed_data['user'][0])
                 telegram_user_id = user_data.get('id')
+                logger.info(f"index: extracted telegram_user_id={telegram_user_id}, type={type(telegram_user_id)}, user_data={user_data}")
 
                 # Проверяем, есть ли пользователь в базе данных
                 if telegram_user_id and not is_authorized_telegram_user(telegram_user_id):
+                    logger.warning(f"index: access denied for telegram_user_id={telegram_user_id}")
                     return render_template('index.html', error="Access denied: User is not registered in the system")
+                else:
+                    logger.info(f"index: access granted for telegram_user_id={telegram_user_id}")
         except Exception as e:
             # Если не удается извлечь данные, продолжаем без проверки
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"index: error extracting telegram_user_id: {e}", exc_info=True)
             pass
 
     return render_template('index.html')

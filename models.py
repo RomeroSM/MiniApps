@@ -11,6 +11,7 @@ class City(db.Model):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, unique=True)
+    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
     
     # Relationships
     objects = relationship('Object', back_populates='city', cascade='all, delete-orphan')
@@ -19,7 +20,8 @@ class City(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
+            'btxid': self.btxid
         }
 
 
@@ -29,6 +31,7 @@ class Object(db.Model):
     id = Column(Integer, primary_key=True, autoincrement=True)
     city_id = Column(Integer, ForeignKey('cities.id', ondelete='CASCADE'), nullable=False)
     name = Column(String(200), nullable=False)
+    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
     
     # Relationships
     city = relationship('City', back_populates='objects')
@@ -38,7 +41,8 @@ class Object(db.Model):
         return {
             'id': self.id,
             'city_id': self.city_id,
-            'name': self.name
+            'name': self.name,
+            'btxid': self.btxid
         }
 
 
@@ -47,6 +51,7 @@ class ViolationCategory(db.Model):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, unique=True)
+    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
     
     # Relationships
     violations = relationship('Violation', back_populates='category', cascade='all, delete-orphan')
@@ -55,7 +60,8 @@ class ViolationCategory(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
+            'btxid': self.btxid
         }
 
 
@@ -65,6 +71,7 @@ class Violation(db.Model):
     id = Column(Integer, primary_key=True, autoincrement=True)
     category_id = Column(Integer, ForeignKey('violation_categories.id', ondelete='CASCADE'), nullable=False)
     name = Column(String(200), nullable=False)
+    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
     
     # Relationships
     category = relationship('ViolationCategory', back_populates='violations')
@@ -74,7 +81,8 @@ class Violation(db.Model):
         return {
             'id': self.id,
             'category_id': self.category_id,
-            'name': self.name
+            'name': self.name,
+            'btxid': self.btxid
         }
 
 
@@ -119,6 +127,7 @@ class User(db.Model):
     last_name = Column(String(100), nullable=False)
     tg_id = Column(Integer, nullable=False, unique=True)  # Telegram user ID
     secret_key = Column(String(64), nullable=False, unique=True)  # Secret key for external system
+    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
@@ -128,6 +137,7 @@ class User(db.Model):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'tg_id': self.tg_id,
+            'btxid': self.btxid,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

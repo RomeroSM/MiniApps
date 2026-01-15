@@ -38,6 +38,9 @@ class Config:
     # Telegram Bot Token (для проверки WebApp данных)
     TELEGRAM_BOT_TOKEN = read_secret('telegram_bot_token', os.getenv('TELEGRAM_BOT_TOKEN', ''))
     
+    # API Token для авторизации внешних сервисов
+    API_TOKEN = read_secret('api_token', os.getenv('API_TOKEN', ''))
+    
     # File upload settings
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
@@ -48,11 +51,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Префикс приложения (для работы за /form и т.п.)
-    # Можно задать через переменную окружения APPLICATION_ROOT
-    APPLICATION_ROOT = os.getenv('APPLICATION_ROOT')
-    
-    # Application root для работы за префиксом (например, /form)
-    # Устанавливается через переменную окружения APPLICATION_ROOT или автоматически определяется
+    # Устанавливается через переменную окружения APPLICATION_ROOT
     APPLICATION_ROOT = os.getenv('APPLICATION_ROOT', None)
 
 

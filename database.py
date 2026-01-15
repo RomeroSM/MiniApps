@@ -1,6 +1,7 @@
 import time
 from flask_sqlalchemy import SQLAlchemy
 from flask import Flask
+from sqlalchemy import text
 
 db = SQLAlchemy()
 
@@ -19,6 +20,10 @@ def init_db(app: Flask):
                 db.engine.connect()
                 # Создание всех таблиц
                 db.create_all()
+                
+                # Проверка и добавление недостающих колонок btxid
+                _add_missing_btxid_columns()
+                
                 break
             except Exception as e:
                 retry_count += 1
@@ -100,3 +105,41 @@ def init_db(app: Flask):
 
             db.session.commit()
 
+
+def _add_missing_btxid_columns():
+    """Добавление недостающих колонок btxid в существующие таблицы"""
+    try:
+        # Список таблиц и колонок для проверки
+        tables_to_check = [
+            ('cities', 'name'),
+            ('objects', 'name'),
+            ('violation_categories', 'name'),
+            ('violations', 'name'),
+            ('users', 'secret_key')
+        ]
+        
+        for table_name, after_column in tables_to_check:
+            try:
+                # Проверяем существование колонки btxid
+                with db.engine.connect() as conn:
+                    result = conn.execute(text(
+                        f"SELECT COUNT(*) as cnt FROM information_schema.COLUMNS "
+                        f"WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{table_name}' AND COLUMN_NAME = 'btxid'"
+                    ))
+                    column_exists = result.fetchone()[0] > 0
+                    
+                    if not column_exists:
+                        # Добавляем колонку btxid
+                        conn.execute(text(
+                            f"ALTER TABLE {table_name} ADD COLUMN btxid INT NULL DEFAULT NULL AFTER {after_column}"
+                        ))
+                        conn.commit()
+                        print(f"Added btxid column to {table_name}")
+            except Exception as e:
+                # Игнорируем ошибки, если колонка уже существует или таблица не существует
+                error_msg = str(e)
+                if 'Duplicate column name' not in error_msg and "doesn't exist" not in error_msg:
+                    print(f"Warning: Could not add btxid to {table_name}: {e}")
+    except Exception as e:
+        # Игнорируем ошибки миграции, чтобы не блокировать запуск приложения
+        print(f"Warning: Could not check/add btxid columns: {e}")

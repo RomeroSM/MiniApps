@@ -11,6 +11,7 @@ MYSQL_USER=appuser
 MYSQL_PASSWORD=secure-app-password
 MYSQL_DATABASE=telegram_miniapp
 TELEGRAM_BOT_TOKEN=your-bot-token-here
+API_TOKEN=your-api-token-for-authorization
 ```
 
 2. **Запустите приложение**:
@@ -106,6 +107,7 @@ docker-compose ps
 - `MYSQL_PASSWORD` - пароль пользователя приложения
 - `MYSQL_DATABASE` - имя базы данных
 - `TELEGRAM_BOT_TOKEN` - токен Telegram бота (опционально)
+- `API_TOKEN` - токен для авторизации API запросов (опционально, если не установлен, авторизация не требуется)
 
 ## Troubleshooting
 
