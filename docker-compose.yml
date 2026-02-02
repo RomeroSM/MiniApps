@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: mysql:8.0
@@ -11,7 +9,7 @@ services:
       MYSQL_USER: ${MYSQL_USER:-appuser}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
     ports:
-      - "3306:3306"
+      - "3307:3306"  # Внешний порт 3307, внутренний 3306
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
@@ -43,6 +41,29 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
+
+  bitrix-sync:
+    build:
+      context: .
+      dockerfile: bitrix-sync/Dockerfile
+    container_name: telegram_miniapp_bitrix_sync
+    restart: always
+    environment:
+      BITRIX_WEBHOOK_URL: ${BITRIX_WEBHOOK_URL:-}
+      MYSQL_HOST: db
+      MYSQL_PORT: 3306
+      MYSQL_USER: ${MYSQL_USER:-appuser}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-telegram_miniapp}
+      SYNC_SCHEDULE: ${SYNC_SCHEDULE:-0 0 * * *}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
     networks:
       - app-network
 

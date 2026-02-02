@@ -118,9 +118,8 @@ def get_request_data():
 
 
 def allowed_file(filename):
-    """Проверка разрешенного расширения файла"""
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
+    """Проверка имени файла (типы не ограничиваем)"""
+    return bool(filename)
 
 
 def is_authorized_telegram_user(telegram_user_id):
@@ -263,7 +262,7 @@ def update_city(city_id):
 
 @api.route('/objects', methods=['GET'])
 def get_objects():
-    """Получить список объектов по городу"""
+    """Получить список объектов по городу (city_id — btxid города в Bitrix24)."""
     try:
         city_id = request.args.get('city_id', type=int)
         if not city_id:
@@ -271,8 +270,13 @@ def get_objects():
                 'success': False,
                 'error': 'city_id parameter is required'
             }), 400
-        
-        objects = Object.query.filter_by(city_id=city_id).order_by(Object.name).all()
+        city = City.query.filter_by(btxid=city_id).first()
+        if not city:
+            return jsonify({
+                'success': False,
+                'error': 'City not found'
+            }), 400
+        objects = Object.query.filter_by(city_id=city.id).order_by(Object.name).all()
         return jsonify({
             'success': True,
             'data': [obj.to_dict() for obj in objects]
@@ -317,7 +321,8 @@ def create_object():
         obj = Object(
             city_id=city_id,
             name=data.get('name').strip(),
-            btxid=int(data.get('btxid')) if data.get('btxid') else None
+            btxid=int(data.get('btxid')) if data.get('btxid') else None,
+            state=data.get('state') or None
         )
 
         db.session.add(obj)
@@ -371,6 +376,9 @@ def update_object(object_id):
 
         if 'btxid' in data:
             obj.btxid = int(data.get('btxid')) if data.get('btxid') else None
+
+        if 'state' in data:
+            obj.state = data.get('state') or None
 
         db.session.commit()
 
@@ -509,7 +517,7 @@ def update_violation_category(category_id):
 
 @api.route('/violations', methods=['GET'])
 def get_violations():
-    """Получить список нарушений по категории"""
+    """Получить список нарушений по категории (category_id — btxid категории в Bitrix24)."""
     try:
         category_id = request.args.get('category_id', type=int)
         if not category_id:
@@ -517,8 +525,13 @@ def get_violations():
                 'success': False,
                 'error': 'category_id parameter is required'
             }), 400
-        
-        violations = Violation.query.filter_by(category_id=category_id).order_by(Violation.name).all()
+        category = ViolationCategory.query.filter_by(btxid=category_id).first()
+        if not category:
+            return jsonify({
+                'success': False,
+                'error': 'Category not found'
+            }), 400
+        violations = Violation.query.filter_by(category_id=category.id).order_by(Violation.name).all()
         return jsonify({
             'success': True,
             'data': [viol.to_dict() for viol in violations]
@@ -558,7 +571,8 @@ def create_violation():
         violation = Violation(
             category_id=category_id,
             name=data.get('name').strip(),
-            btxid=int(data.get('btxid')) if data.get('btxid') else None
+            btxid=int(data.get('btxid')) if data.get('btxid') else None,
+            state=data.get('state') or None
         )
 
         db.session.add(violation)
@@ -612,6 +626,9 @@ def update_violation(violation_id):
 
         if 'btxid' in data:
             violation.btxid = int(data.get('btxid')) if data.get('btxid') else None
+
+        if 'state' in data:
+            violation.state = data.get('state') or None
 
         db.session.commit()
 
@@ -687,42 +704,61 @@ def submit_form():
                     'error': f'Field {field} is required'
                 }), 400
 
-        city_id = int(data.get('city_id'))
-        object_id = int(data.get('object_id'))
-        violation_category_id = int(data.get('violation_category_id'))
-        violation_id = int(data.get('violation_id'))
+        city_id = int(data.get('city_id'))  # btxid города в Bitrix24
+        object_id = int(data.get('object_id'))  # btxid объекта
+        violation_category_id = int(data.get('violation_category_id'))  # btxid категории
+        violation_id = int(data.get('violation_id'))  # btxid нарушения
         comment = data.get('comment', '').strip()
 
-        # Проверка существования связанных записей
-        if not City.query.get(city_id):
+        # Проверка существования связанных записей (по btxid)
+        city = City.query.filter_by(btxid=city_id).first()
+        if not city:
             return jsonify({
                 'success': False,
                 'error': 'Invalid city_id'
             }), 400
 
-        if not Object.query.filter_by(id=object_id, city_id=city_id).first():
+        obj = Object.query.filter_by(btxid=object_id).first()
+        if not obj or obj.city_id != city.id:
             return jsonify({
                 'success': False,
                 'error': 'Invalid object_id for selected city'
             }), 400
 
-        if not ViolationCategory.query.get(violation_category_id):
+        category = ViolationCategory.query.filter_by(btxid=violation_category_id).first()
+        if not category:
             return jsonify({
                 'success': False,
                 'error': 'Invalid violation_category_id'
             }), 400
 
-        if not Violation.query.filter_by(id=violation_id, category_id=violation_category_id).first():
+        violation = Violation.query.filter_by(btxid=violation_id).first()
+        if not violation or violation.category_id != category.id:
             return jsonify({
                 'success': False,
                 'error': 'Invalid violation_id for selected category'
             }), 400
 
-        # Обработка загрузки файла
+        # Обработка загрузки файлов
         file_path = None
-        if 'file' in request.files:
-            file = request.files['file']
-            if file and file.filename and allowed_file(file.filename):
+        files = request.files.getlist('files') or request.files.getlist('file')
+        files = [f for f in files if f and f.filename]
+
+        if files:
+            if len(files) > 5:
+                return jsonify({
+                    'success': False,
+                    'error': 'Maximum 5 files are allowed'
+                }), 400
+
+            saved_files = []
+            for file in files:
+                if not allowed_file(file.filename):
+                    return jsonify({
+                        'success': False,
+                        'error': 'Invalid file'
+                    }), 400
+
                 # Проверка размера файла
                 file.seek(0, os.SEEK_END)
                 file_size = file.tell()
@@ -744,11 +780,15 @@ def submit_form():
                 # Создаем папку uploads если её нет
                 os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
 
-                file_path = os.path.join(Config.UPLOAD_FOLDER, filename)
-                file.save(file_path)
-                file_path = filename  # Сохраняем только имя файла в БД
+                file_full_path = os.path.join(Config.UPLOAD_FOLDER, filename)
+                file.save(file_full_path)
+                saved_files.append(filename)
 
-        # Создание записи
+            # Сохраняем список файлов в БД
+            import json
+            file_path = json.dumps(saved_files)
+
+        # Создание записи (city_id хранит btxid города)
         submission = FormSubmission(
             city_id=city_id,
             object_id=object_id,

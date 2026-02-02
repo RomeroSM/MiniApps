@@ -11,11 +11,11 @@ class City(db.Model):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, unique=True)
-    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
+    btxid = Column(Integer, nullable=True, unique=True)  # ID для внешних сервисов (Bitrix24), уникален для FK из form_submissions
     
     # Relationships
     objects = relationship('Object', back_populates='city', cascade='all, delete-orphan')
-    form_submissions = relationship('FormSubmission', back_populates='city')
+    form_submissions = relationship('FormSubmission', back_populates='city', foreign_keys='FormSubmission.city_id')
     
     def to_dict(self):
         return {
@@ -31,18 +31,20 @@ class Object(db.Model):
     id = Column(Integer, primary_key=True, autoincrement=True)
     city_id = Column(Integer, ForeignKey('cities.id', ondelete='CASCADE'), nullable=False)
     name = Column(String(200), nullable=False)
-    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
+    btxid = Column(Integer, nullable=True, unique=True)  # ID для внешних сервисов (Bitrix24), уникален для FK из form_submissions
+    state = Column(String(100), nullable=True)  # состояние объекта (из Bitrix PROPERTY_645)
     
     # Relationships
     city = relationship('City', back_populates='objects')
-    form_submissions = relationship('FormSubmission', back_populates='object')
+    form_submissions = relationship('FormSubmission', back_populates='object', foreign_keys='FormSubmission.object_id')
     
     def to_dict(self):
         return {
             'id': self.id,
             'city_id': self.city_id,
             'name': self.name,
-            'btxid': self.btxid
+            'btxid': self.btxid,
+            'state': self.state
         }
 
 
@@ -51,11 +53,11 @@ class ViolationCategory(db.Model):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, unique=True)
-    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
+    btxid = Column(Integer, nullable=True, unique=True)  # ID для внешних сервисов (Bitrix24), уникален для FK из form_submissions
     
     # Relationships
     violations = relationship('Violation', back_populates='category', cascade='all, delete-orphan')
-    form_submissions = relationship('FormSubmission', back_populates='violation_category')
+    form_submissions = relationship('FormSubmission', back_populates='violation_category', foreign_keys='FormSubmission.violation_category_id')
     
     def to_dict(self):
         return {
@@ -71,18 +73,20 @@ class Violation(db.Model):
     id = Column(Integer, primary_key=True, autoincrement=True)
     category_id = Column(Integer, ForeignKey('violation_categories.id', ondelete='CASCADE'), nullable=False)
     name = Column(String(200), nullable=False)
-    btxid = Column(Integer, nullable=True)  # ID для внешних сервисов
+    btxid = Column(Integer, nullable=True, unique=True)  # ID для внешних сервисов (Bitrix24), уникален для FK из form_submissions
+    state = Column(String(100), nullable=True)  # состояние (из Bitrix PROPERTY_1115)
     
     # Relationships
     category = relationship('ViolationCategory', back_populates='violations')
-    form_submissions = relationship('FormSubmission', back_populates='violation')
+    form_submissions = relationship('FormSubmission', back_populates='violation', foreign_keys='FormSubmission.violation_id')
     
     def to_dict(self):
         return {
             'id': self.id,
             'category_id': self.category_id,
             'name': self.name,
-            'btxid': self.btxid
+            'btxid': self.btxid,
+            'state': self.state
         }
 
 
@@ -90,20 +94,20 @@ class FormSubmission(db.Model):
     __tablename__ = 'form_submissions'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
-    city_id = Column(Integer, ForeignKey('cities.id', ondelete='RESTRICT'), nullable=False)
-    object_id = Column(Integer, ForeignKey('objects.id', ondelete='RESTRICT'), nullable=False)
-    violation_category_id = Column(Integer, ForeignKey('violation_categories.id', ondelete='RESTRICT'), nullable=False)
-    violation_id = Column(Integer, ForeignKey('violations.id', ondelete='RESTRICT'), nullable=False)
+    city_id = Column(Integer, ForeignKey('cities.btxid', ondelete='RESTRICT'), nullable=True)  # btxid города в Bitrix24 (NULL если город без btxid)
+    object_id = Column(Integer, ForeignKey('objects.btxid', ondelete='RESTRICT'), nullable=True)  # btxid объекта в Bitrix24
+    violation_category_id = Column(Integer, ForeignKey('violation_categories.btxid', ondelete='RESTRICT'), nullable=True)  # btxid категории в Bitrix24
+    violation_id = Column(Integer, ForeignKey('violations.btxid', ondelete='RESTRICT'), nullable=True)  # btxid нарушения в Bitrix24
     comment = Column(Text, nullable=True)
-    file_path = Column(String(500), nullable=True)
+    file_path = Column(Text, nullable=True)
     telegram_user_id = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     
-    # Relationships
-    city = relationship('City', back_populates='form_submissions')
-    object = relationship('Object', back_populates='form_submissions')
-    violation_category = relationship('ViolationCategory', back_populates='form_submissions')
-    violation = relationship('Violation', back_populates='form_submissions')
+    # Relationships (city_id, object_id, violation_category_id, violation_id хранят btxid)
+    city = relationship('City', back_populates='form_submissions', foreign_keys=[city_id], primaryjoin='FormSubmission.city_id == City.btxid')
+    object = relationship('Object', back_populates='form_submissions', foreign_keys=[object_id], primaryjoin='FormSubmission.object_id == Object.btxid')
+    violation_category = relationship('ViolationCategory', back_populates='form_submissions', foreign_keys=[violation_category_id], primaryjoin='FormSubmission.violation_category_id == ViolationCategory.btxid')
+    violation = relationship('Violation', back_populates='form_submissions', foreign_keys=[violation_id], primaryjoin='FormSubmission.violation_id == Violation.btxid')
     
     def to_dict(self):
         return {

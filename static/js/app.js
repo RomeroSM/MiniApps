@@ -63,10 +63,10 @@ async function loadCities() {
             cities = result.data;
             const citySelect = document.getElementById('city');
             citySelect.innerHTML = '<option value="">Выберите город</option>';
-            
-            cities.forEach(city => {
+            // В форме city_id — это btxid города (для form_submissions)
+            cities.filter(city => city.btxid != null).forEach(city => {
                 const option = document.createElement('option');
-                option.value = city.id;
+                option.value = city.btxid;
                 option.textContent = city.name;
                 citySelect.appendChild(option);
             });
@@ -96,9 +96,9 @@ async function loadObjects(cityId) {
             if (objects.length === 0) {
                 objectSelect.innerHTML = '<option value="">Нет объектов для выбранного города</option>';
             } else {
-                objects.forEach(obj => {
+                objects.filter(obj => obj.btxid != null).forEach(obj => {
                     const option = document.createElement('option');
-                    option.value = obj.id;
+                    option.value = obj.btxid;
                     option.textContent = obj.name;
                     objectSelect.appendChild(option);
                 });
@@ -126,9 +126,9 @@ async function loadViolationCategories() {
             const categorySelect = document.getElementById('violationCategory');
             categorySelect.innerHTML = '<option value="">Выберите категорию</option>';
             
-            violationCategories.forEach(cat => {
+            violationCategories.filter(cat => cat.btxid != null).forEach(cat => {
                 const option = document.createElement('option');
-                option.value = cat.id;
+                option.value = cat.btxid;
                 option.textContent = cat.name;
                 categorySelect.appendChild(option);
             });
@@ -158,9 +158,9 @@ async function loadViolations(categoryId) {
             if (violations.length === 0) {
                 violationSelect.innerHTML = '<option value="">Нет нарушений для выбранной категории</option>';
             } else {
-                violations.forEach(viol => {
+                violations.filter(viol => viol.btxid != null).forEach(viol => {
                     const option = document.createElement('option');
-                    option.value = viol.id;
+                    option.value = viol.btxid;
                     option.textContent = viol.name;
                     violationSelect.appendChild(option);
                 });
@@ -216,26 +216,22 @@ function setupFormHandlers() {
         violationSelect.value = '';
     });
     
-    // Обработчик выбора файла
+    // Обработчик выбора файлов
     fileInput.addEventListener('change', function() {
-        const file = this.files[0];
+        const files = Array.from(this.files || []);
         const errorElement = document.getElementById('file-error');
         errorElement.textContent = '';
         
-        if (file) {
-            // Проверка размера файла (10 МБ)
-            const maxSize = 10 * 1024 * 1024;
+        if (files.length > 5) {
+            errorElement.textContent = 'Можно прикрепить не более 5 файлов';
+            this.value = '';
+            return;
+        }
+        
+        const maxSize = 50 * 1024 * 1024;
+        for (const file of files) {
             if (file.size > maxSize) {
-                errorElement.textContent = 'Размер файла превышает 10 МБ';
-                this.value = '';
-                return;
-            }
-            
-            // Проверка расширения
-            const allowedExtensions = ['png', 'jpg', 'jpeg', 'gif', 'pdf', 'doc', 'docx', 'txt'];
-            const fileExtension = file.name.split('.').pop().toLowerCase();
-            if (!allowedExtensions.includes(fileExtension)) {
-                errorElement.textContent = 'Недопустимый тип файла';
+                errorElement.textContent = `Файл "${file.name}" превышает 50 МБ`;
                 this.value = '';
                 return;
             }
