@@ -59,6 +59,9 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-telegram_miniapp}
       SYNC_SCHEDULE: ${SYNC_SCHEDULE:-0 0 * * *}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      EXPORT_UPLOAD_FOLDER: /app/bitrix-sync/app/uploads
+    volumes:
+      - ./bitrix-sync/app/uploads:/app/bitrix-sync/app/uploads
     depends_on:
       db:
         condition: service_healthy

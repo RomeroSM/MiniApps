@@ -1,6 +1,9 @@
+import base64
+import json
+import logging
 import requests
 import time
-import logging
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 from app.config import Config
 
@@ -41,16 +44,17 @@ class Bitrix24Client:
         self.max_retries = 3
         self.retry_delay = 1
     
-    def _call_method(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+    def _call_method(self, method: str, params: Optional[Dict] = None, return_full_response: bool = False) -> Any:
         """
         Вызов метода Bitrix24 REST API через POST-запрос
         
         Args:
             method: Название метода API (например, 'crm.type.list')
             params: Параметры запроса
+            return_full_response: Если True, вернуть полный ответ (result + next и др.), иначе только result
             
         Returns:
-            Ответ от API
+            Ответ от API (result или полный dict при return_full_response=True)
             
         Raises:
             Exception: При ошибке выполнения запроса
@@ -118,6 +122,8 @@ class Bitrix24Client:
                     logger.error(f"Bitrix24 API error: {error_msg}")
                     raise Exception(f"Bitrix24 API error: {error_msg}")
                 
+                if return_full_response:
+                    return data
                 return data.get('result', {})
                 
             except requests.exceptions.RequestException as e:
@@ -223,3 +229,66 @@ class Bitrix24Client:
             return response[0]
         
         return None
+
+    def upload_file_to_disk(self, file_path: str) -> Optional[int]:
+        """
+        Загружает файл в диск Bitrix24 и возвращает ID загруженного файла (объекта диска).
+        Использует disk.folder.uploadfile с base64-телом и Content-Type application/json; charset=windows-1251,
+        как требуется для корректной загрузки фото в Bitrix24.
+
+        Args:
+            file_path: Полный путь к файлу на диске.
+
+        Returns:
+            ID объекта диска (FILE_ID) или None при ошибке.
+        """
+        path = Path(file_path)
+        if not path.is_file():
+            logger.warning(f"Файл не найден: {file_path}")
+            return None
+        try:
+            with open(file_path, "rb") as f:
+                encoded_bytes = base64.b64encode(f.read())
+            encoded_string = str(encoded_bytes)[2:-1]  # убираем префикс b' и суффикс '
+        except Exception as e:
+            logger.error(f"Ошибка чтения/кодирования файла {file_path}: {e}")
+            return None
+
+        folder_id = getattr(Config, 'EXPORT_DISK_FOLDER_ID', '200931')
+        # Имя файла: unixtime + оригинальное расширение (как в рабочем варианте b24_photo_send)
+        unixtime_name = str(int(time.time()))
+        ext = path.suffix if path.suffix else '.jpg'
+        file_name = unixtime_name + ext
+
+        method = 'disk.folder.uploadfile'
+        request_url = f"{self.webhook_url}/{method}"
+        payload = json.dumps({
+            "id": folder_id,
+            "data": {"NAME": file_name},
+            "fileContent": encoded_string,
+        }, ensure_ascii=False)
+
+        try:
+            response = requests.post(
+                request_url,
+                data=payload.encode('utf-8'),
+                headers={'Content-Type': 'application/json; charset=windows-1251'},
+                timeout=self.timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if data.get('error'):
+                logger.error("Bitrix24 disk.folder.uploadfile error: %s", data.get('error_description', data.get('error')))
+                return None
+            result = data.get('result') or data
+            if isinstance(result, dict):
+                file_id = result.get('ID') or result.get('id')
+                if file_id is not None:
+                    return int(file_id)
+            elif isinstance(result, int) and result > 0:
+                return result
+            logger.warning("Не удалось получить ID файла из ответа disk.folder.uploadfile: %s", data)
+            return None
+        except Exception as e:
+            logger.error(f"Ошибка загрузки файла в Bitrix24: {e}", exc_info=True)
+            return None

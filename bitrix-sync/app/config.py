@@ -56,14 +56,12 @@ class Config:
     # Экспорт form_submissions в список Bitrix (IBLOCK_ID=125)
     EXPORT_IBLOCK_TYPE_ID = os.getenv('EXPORT_IBLOCK_TYPE_ID', 'bitrix_processes')
     EXPORT_IBLOCK_ID = os.getenv('EXPORT_IBLOCK_ID', '125')
-    # Коды свойств списка 125 (если пусто — в элемент передаётся только NAME)
-    EXPORT_PROPERTY_CITY = os.getenv('EXPORT_PROPERTY_CITY', '')
-    EXPORT_PROPERTY_OBJECT = os.getenv('EXPORT_PROPERTY_OBJECT', '')
-    EXPORT_PROPERTY_CATEGORY = os.getenv('EXPORT_PROPERTY_CATEGORY', '')
-    EXPORT_PROPERTY_VIOLATION = os.getenv('EXPORT_PROPERTY_VIOLATION', '')
-    EXPORT_PROPERTY_COMMENT = os.getenv('EXPORT_PROPERTY_COMMENT', '')
-    EXPORT_PROPERTY_FILE = os.getenv('EXPORT_PROPERTY_FILE', '')
-    EXPORT_PROPERTY_TELEGRAM_USER_ID = os.getenv('EXPORT_PROPERTY_TELEGRAM_USER_ID', '')
+    # Папка, где всегда лежат файлы для экспорта (по умолчанию .../bitrix-sync/app/uploads).
+    # Имя файла берётся из таблицы form_submissions, столбец file_path.
+    _default_uploads = str(Path(__file__).resolve().parent / 'uploads')
+    EXPORT_UPLOAD_FOLDER = os.getenv('EXPORT_UPLOAD_FOLDER', _default_uploads)
+    # ID папки на диске Bitrix24 для загрузки файлов (disk.folder.uploadfile)
+    EXPORT_DISK_FOLDER_ID = os.getenv('EXPORT_DISK_FOLDER_ID', '200951')
 
     # Уровень логирования
     LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')

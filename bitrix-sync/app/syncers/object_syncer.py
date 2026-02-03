@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Dict, Any, Optional, List
 from app.syncers.base_syncer import BaseSyncer
 from app.database import get_models, get_session
@@ -96,29 +97,38 @@ class ObjectSyncer(BaseSyncer):
             from app.database import ensure_objects_state_column
             ensure_objects_state_column()
 
-            # Получаем элементы списка для IBLOCK_ID=77
+            # Получаем элементы списка для IBLOCK_ID=77 с пагинацией по start/next
             method_name = self.get_bitrix_method()
             request_params = {
                 'IBLOCK_TYPE_ID': 'bitrix_processes',
-                'IBLOCK_ID': '77'
+                'IBLOCK_ID': '77',
+                'start': 0,
             }
-            logger.info(f"Вызываем Bitrix24 метод: {method_name} с параметрами: {request_params}")
-            
-            # lists.element.get возвращает result как список элементов
-            response = self.bitrix_client._call_method(method_name, request_params)
-            
-            if isinstance(response, list):
-                all_elements = response
-            elif isinstance(response, dict):
-                all_elements = response.get('items', [])
-            else:
-                all_elements = []
-            
+            all_elements = []
+            while True:
+                logger.info(f"Вызываем Bitrix24 метод: {method_name} с параметрами: {request_params}")
+                full_response = self.bitrix_client._call_method(method_name, request_params, return_full_response=True)
+                api_result = full_response.get('result') if isinstance(full_response, dict) else full_response
+                next_start = full_response.get('next') if isinstance(full_response, dict) else None
+
+                if isinstance(api_result, list):
+                    chunk = api_result
+                elif isinstance(api_result, dict):
+                    chunk = api_result.get('items', [])
+                else:
+                    chunk = []
+                all_elements.extend(chunk)
+
+                if next_start is None:
+                    break
+                request_params['start'] = next_start
+                time.sleep(0.1)
+
             logger.info(f"Получено {len(all_elements)} элементов из Bitrix24")
             
             if not all_elements:
                 logger.warning("Не получено элементов из Bitrix24")
-                return result
+                return result  # result — словарь с created/updated/errors
             
             # Расшифровка состояния: lists.field.get (IBLOCK_ID=77) → PROPERTY_645 → DISPLAY_VALUES_FORM (id → label)
             state_display_values = {}
