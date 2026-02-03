@@ -168,5 +168,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-def test():
-    print("test")
+
+
+print("test")
+a = 1
