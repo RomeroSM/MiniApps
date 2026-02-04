@@ -56,9 +56,9 @@ class Config:
     # Экспорт form_submissions в список Bitrix (IBLOCK_ID=125)
     EXPORT_IBLOCK_TYPE_ID = os.getenv('EXPORT_IBLOCK_TYPE_ID', 'bitrix_processes')
     EXPORT_IBLOCK_ID = os.getenv('EXPORT_IBLOCK_ID', '125')
-    # Папка, где всегда лежат файлы для экспорта (по умолчанию .../bitrix-sync/app/uploads).
-    # Имя файла берётся из таблицы form_submissions, столбец file_path.
-    _default_uploads = str(Path(__file__).resolve().parent / 'uploads')
+    # Папка проекта uploads (все файлы лежат здесь). В БД (form_submissions.file_path) — только имя файла, например i.webp.
+    _project_root = Path(__file__).resolve().parent.parent.parent
+    _default_uploads = str(_project_root / 'uploads')
     EXPORT_UPLOAD_FOLDER = os.getenv('EXPORT_UPLOAD_FOLDER', _default_uploads)
     # ID папки на диске Bitrix24 для загрузки файлов (disk.folder.uploadfile)
     EXPORT_DISK_FOLDER_ID = os.getenv('EXPORT_DISK_FOLDER_ID', '200951')

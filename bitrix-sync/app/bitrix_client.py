@@ -255,7 +255,7 @@ class Bitrix24Client:
             return None
 
         folder_id = getattr(Config, 'EXPORT_DISK_FOLDER_ID', '200931')
-        # Имя файла: unixtime + оригинальное расширение (как в рабочем варианте b24_photo_send)
+        # Имя в Bitrix: unixtime + оригинальное расширение (png, jpg, pdf, v8i и любые другие)
         unixtime_name = str(int(time.time()))
         ext = path.suffix if path.suffix else '.jpg'
         file_name = unixtime_name + ext
@@ -284,11 +284,13 @@ class Bitrix24Client:
             if isinstance(result, dict):
                 file_id = result.get('ID') or result.get('id')
                 if file_id is not None:
+                    logger.info("Файл загружен в Bitrix24: %s → id=%s", path.name, file_id)
                     return int(file_id)
             elif isinstance(result, int) and result > 0:
+                logger.info("Файл загружен в Bitrix24: %s → id=%s", path.name, result)
                 return result
-            logger.warning("Не удалось получить ID файла из ответа disk.folder.uploadfile: %s", data)
+            logger.warning("Фото не отправлено: Bitrix вернул ответ без ID файла: %s", data)
             return None
         except Exception as e:
-            logger.error(f"Ошибка загрузки файла в Bitrix24: {e}", exc_info=True)
+            logger.error("Фото не отправлено: ошибка загрузки в Bitrix24: %s", e, exc_info=True)
             return None
